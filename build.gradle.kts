@@ -2,8 +2,8 @@ import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 import org.jetbrains.kotlin.gradle.dsl.KotlinVersion
 
 plugins {
-    kotlin("jvm") version "2.2.21"
-    kotlin("plugin.serialization") version "2.2.21"
+    kotlin("jvm") version "2.3.0"
+    kotlin("plugin.serialization") version "2.3.0"
     id("com.gradleup.shadow") version "9.2.2"
     `maven-publish`
 }
@@ -22,8 +22,8 @@ repositories {
 
 dependencies {
     // Minecraft APIs
-    val exposedVersion = "1.0.0-rc-2"
-    val ktorVersion = "3.3.1"
+    val exposedVersion = "1.0.0-rc-4"
+    val ktorVersion = "3.3.3"
 
     compileOnly("net.kyori:adventure-text-minimessage:4.16.0")
 
@@ -43,13 +43,13 @@ dependencies {
     api("com.zaxxer:HikariCP:7.0.2")
 
     api("org.jetbrains.kotlinx:kotlinx-serialization-core:1.9.0")
-    api("com.charleskorn.kaml:kaml:0.102.0")
+    api("com.charleskorn.kaml:kaml:0.104.0")
 
 
     // Database drivers
-    runtimeOnly("com.mysql:mysql-connector-j:9.4.0")
+    runtimeOnly("com.mysql:mysql-connector-j:9.5.0")
     runtimeOnly("org.postgresql:postgresql:42.7.8")
-    runtimeOnly("org.mariadb.jdbc:mariadb-java-client:3.5.6")
+    runtimeOnly("org.mariadb.jdbc:mariadb-java-client:3.5.7")
     runtimeOnly("com.h2database:h2:2.4.240")
 }
 
