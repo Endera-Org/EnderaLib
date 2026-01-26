@@ -1,6 +1,13 @@
 package org.endera.enderalib.utils.configuration
 
-import com.charleskorn.kaml.*
+import com.charleskorn.kaml.Yaml
+import com.charleskorn.kaml.YamlConfiguration
+import com.charleskorn.kaml.YamlList
+import com.charleskorn.kaml.YamlMap
+import com.charleskorn.kaml.YamlNamingStrategy
+import com.charleskorn.kaml.YamlNode
+import com.charleskorn.kaml.YamlNull
+import com.charleskorn.kaml.YamlScalar
 import kotlinx.serialization.KSerializer
 
 /**
@@ -14,25 +21,34 @@ import kotlinx.serialization.KSerializer
 fun <T> mergeYamlConfigs(
     fileContent: String,
     defaultConfig: T,
-    serializer: KSerializer<T>
+    serializer: KSerializer<T>,
 ): T {
     val yaml = Yaml(
         configuration = YamlConfiguration(
             strictMode = false,
             breakScalarsAt = 400,
-            yamlNamingStrategy = YamlNamingStrategy.KebabCase
-        )
+            yamlNamingStrategy = YamlNamingStrategy.KebabCase,
+        ),
     )
-    // Декодируем содержимое файла в динамическое представление
-    val fileNode = yaml.decodeFromString(YamlNode.serializer(), fileContent)
-    // Кодируем дефолтный объект в YAML и декодируем в динамическое представление
+
+    val fileNode = yaml.decodeFromString(YamlNode.serializer(), fileContent.stripUtf8Bom())
     val defaultYamlString = yaml.encodeToString(serializer, defaultConfig)
     val defaultNode = yaml.decodeFromString(YamlNode.serializer(), defaultYamlString)
-    // Объединяем два YAML-дерева
-    val mergedNode = mergeYamlNodes(fileNode, defaultNode)
-    // Преобразуем объединённое дерево обратно в YAML-строку и декодируем в объект конфигурации
+
+    val mergedNode = mergeYamlNodesInternal(fileNode, defaultNode, schemaAware = false)
     val mergedYamlString = yaml.encodeToString(YamlNode.serializer(), mergedNode)
-    return yaml.decodeFromString(serializer, mergedYamlString)
+    return try {
+        yaml.decodeFromString(serializer, mergedYamlString)
+    } catch (first: Exception) {
+        val schemaAwareNode = mergeYamlNodesInternal(fileNode, defaultNode, schemaAware = true)
+        val schemaAwareYamlString = yaml.encodeToString(YamlNode.serializer(), schemaAwareNode)
+        try {
+            yaml.decodeFromString(serializer, schemaAwareYamlString)
+        } catch (second: Exception) {
+            second.addSuppressed(first)
+            throw second
+        }
+    }
 }
 
 /**
@@ -44,25 +60,55 @@ fun <T> mergeYamlConfigs(
  * For lists, the value from fileNode is used.
  * In other cases, fileNode is returned.
  */
-fun mergeYamlNodes(fileNode: YamlNode, defaultNode: YamlNode): YamlNode {
-    return when {
-        fileNode is YamlMap && defaultNode is YamlMap -> {
-            val mergedEntries = mutableMapOf<YamlScalar, YamlNode>()
-            defaultNode.entries.forEach { (defaultKey, defaultValue) ->
-                val matchingFileKey = fileNode.entries.keys.find { it.content == defaultKey.content }
-                val fileValue = matchingFileKey?.let { fileNode.entries[it] }
-                mergedEntries[defaultKey] = if (fileValue != null) mergeYamlNodes(fileValue, defaultValue) else defaultValue
+fun mergeYamlNodes(fileNode: YamlNode, defaultNode: YamlNode): YamlNode =
+    mergeYamlNodesInternal(fileNode, defaultNode, schemaAware = false)
+
+private fun mergeYamlNodesInternal(fileNode: YamlNode, defaultNode: YamlNode, schemaAware: Boolean): YamlNode {
+    if (schemaAware) {
+        when (defaultNode) {
+            is YamlMap -> if (fileNode !is YamlMap) return defaultNode
+            is YamlList -> if (fileNode !is YamlList) return defaultNode
+            else -> {
+                if (fileNode is YamlMap || fileNode is YamlList) return defaultNode
+                if (fileNode is YamlNull && defaultNode !is YamlNull) return defaultNode
             }
-            fileNode.entries.forEach { (fileKey, fileValue) ->
-                if (!mergedEntries.keys.any { it.content == fileKey.content }) {
-                    mergedEntries[fileKey] = fileValue
-                }
-            }
-            YamlMap(mergedEntries, path = YamlPath.root)
         }
-        fileNode is YamlList && defaultNode is YamlList -> {
-            fileNode
-        }
+    }
+
+    return when (fileNode) {
+        is YamlMap if defaultNode is YamlMap -> mergeYamlMaps(fileNode, defaultNode, schemaAware)
+        is YamlList if defaultNode is YamlList -> fileNode
         else -> fileNode
     }
 }
+
+private fun mergeYamlMaps(fileNode: YamlMap, defaultNode: YamlMap, schemaAware: Boolean): YamlMap {
+    val mergedEntries = linkedMapOf<YamlScalar, YamlNode>()
+
+    val fileEntriesByContent = fileNode.entries.entries.associateBy { it.key.content }
+    val fileEntriesByNormalized = linkedMapOf<String, Map.Entry<YamlScalar, YamlNode>>().apply {
+        for (entry in fileNode.entries.entries) {
+            putIfAbsent(entry.key.content.toKebabCase(), entry)
+        }
+    }
+
+    for ((defaultKey, defaultValue) in defaultNode.entries) {
+        val fileEntry = fileEntriesByContent[defaultKey.content]
+            ?: fileEntriesByNormalized[defaultKey.content.toKebabCase()]
+        val mergedValue = if (fileEntry != null) {
+            mergeYamlNodesInternal(fileEntry.value, defaultValue, schemaAware)
+        } else {
+            defaultValue
+        }
+        mergedEntries[defaultKey] = mergedValue
+    }
+
+    for ((fileKey, fileValue) in fileNode.entries) {
+        if (!mergedEntries.keys.any { it.content == fileKey.content }) {
+            mergedEntries[fileKey] = fileValue
+        }
+    }
+
+    return YamlMap(mergedEntries, path = defaultNode.path)
+}
+

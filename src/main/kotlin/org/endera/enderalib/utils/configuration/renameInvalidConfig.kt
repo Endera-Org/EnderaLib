@@ -1,8 +1,11 @@
 package org.endera.enderalib.utils.configuration
 
 import java.io.File
-import java.text.SimpleDateFormat
-import java.util.*
+import java.nio.file.Files
+import java.nio.file.StandardCopyOption
+import java.time.Instant
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
 
 /**
  * Renames the provided configuration file by appending a timestamp and marking it as invalid.
@@ -12,21 +15,67 @@ import java.util.*
  * @param file The file object representing the existing configuration file to be renamed.
  */
 fun renameInvalidConfig(file: File) {
-    val dateFormat = SimpleDateFormat("yyyy-MM-dd_HH-mm-ss")
-    val originalName = file.name
-    val dotIndex = originalName.lastIndexOf('.')
-    val newName = if (dotIndex != -1) {
-        // Если есть расширение, то вставляем суффикс перед ним
-        val baseName = originalName.substring(0, dotIndex)
-        val extension = originalName.substring(dotIndex) // включает точку
-        "${baseName}_invalid_${dateFormat.format(Date())}$extension"
-    } else {
-        // Если расширения нет, просто добавляем суффикс к имени
-        "${originalName}_invalid_${dateFormat.format(Date())}"
+    if (!file.exists()) return
+
+    val timestamp = DateTimeFormatter
+        .ofPattern("yyyy-MM-dd_HH-mm-ss")
+        .withZone(ZoneId.systemDefault())
+        .format(Instant.now())
+
+    val newNameBase = buildString {
+        append(file.nameWithoutExtension)
+        append("_invalid_")
+        append(timestamp)
     }
 
-    val success = file.renameTo(File(file.parent, newName))
-    if (!success) {
-        println("Не удалось переименовать файл конфигурации.")
+    val target = generateNonExistingSibling(
+        file = file,
+        nameWithoutExtension = newNameBase,
+        extension = file.extension
+    )
+
+    try {
+        Files.move(
+            file.toPath(),
+            target.toPath(),
+            StandardCopyOption.ATOMIC_MOVE
+        )
+    } catch (_: Exception) {
+        try {
+            Files.move(
+                file.toPath(),
+                target.toPath()
+            )
+        } catch (_: Exception) {
+            runCatching { file.copyTo(target, overwrite = false) }
+            runCatching { file.delete() }
+        }
+    }
+}
+
+private fun generateNonExistingSibling(
+    file: File,
+    nameWithoutExtension: String,
+    extension: String,
+): File {
+    val parent = file.parentFile ?: File(".")
+    val ext = extension.takeIf { it.isNotBlank() }
+    fun buildName(index: Int?): String = buildString {
+        append(nameWithoutExtension)
+        if (index != null) {
+            append("_")
+            append(index)
+        }
+        if (ext != null) {
+            append(".")
+            append(ext)
+        }
+    }
+
+    var index: Int? = null
+    while (true) {
+        val candidate = File(parent, buildName(index))
+        if (!candidate.exists()) return candidate
+        index = (index ?: 0) + 1
     }
 }

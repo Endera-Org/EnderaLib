@@ -9,7 +9,7 @@ plugins {
 }
 
 group = "org.endera"
-version = "1.4.6"
+version = "1.4.7"
 
 repositories {
     mavenCentral()

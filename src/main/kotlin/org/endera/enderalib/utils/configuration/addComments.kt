@@ -1,33 +1,37 @@
 package org.endera.enderalib.utils.configuration
 
+import kotlinx.serialization.SerialName
+import kotlinx.serialization.Serializable
 import kotlin.reflect.KClass
 import kotlin.reflect.full.findAnnotation
 import kotlin.reflect.full.memberProperties
 
 fun String.toKebabCase(): String =
-    this.replace(Regex("([a-z])([A-Z])"), "$1-$2").lowercase()
+    trim()
+        .replace('_', '-')
+        .replace(' ', '-')
+        .replace(Regex("([a-z0-9])([A-Z])"), "$1-$2")
+        .replace(Regex("-{2,}"), "-")
+        .lowercase()
 
 fun addCommentsForClass(clazz: KClass<*>, yamlText: String, baseIndent: String = ""): String {
     var result = yamlText
     clazz.memberProperties.forEach { property ->
-        // Получаем аннотации для комментария и spacer.
         val comment = property.findAnnotation<Comment>()
         val spacer = property.findAnnotation<Spacer>()
-        val key = property.name.toKebabCase()
+        val key = property.findAnnotation<SerialName>()?.value ?: property.name.toKebabCase()
 
-        // Регулярное выражение для поиска строки с ключом и последующего блока с отступом больше baseIndent.
-        val regex = Regex("(?m)^($baseIndent)($key:.*(?:\n(?!$baseIndent\\S).*)*)")
+        val escapedKey = Regex.escape(key)
+        val regex = Regex("(?m)^($baseIndent)($escapedKey:.*(?:\n(?!$baseIndent\\S).*)*)")
         result = regex.replace(result) { matchResult ->
             val indent = matchResult.groupValues[1]
             var block = matchResult.groupValues[2]
 
-            // Если тип свойства – вложенная data class, обрабатываем её рекурсивно, увеличивая отступ (например, на 2 пробела)
             val nestedType = property.returnType.classifier as? KClass<*>
-            if (nestedType != null && nestedType.annotations.any { it.annotationClass.simpleName == "Serializable" }) {
+            if (nestedType != null && nestedType.findAnnotation<Serializable>() != null) {
                 block = addCommentsForClass(nestedType, block, "$baseIndent  ")
             }
 
-            // Формирование комментариев, если присутствует аннотация @Comment.
             val commentStr = if (comment != null) {
                 comment.text
                     .trimIndent()
@@ -35,11 +39,9 @@ fun addCommentsForClass(clazz: KClass<*>, yamlText: String, baseIndent: String =
                     .joinToString("\n") { "$indent# $it" } + "\n"
             } else ""
 
-            // Формирование N пустых строк, если есть аннотация @Spacer.
             val spacerStr = spacer?.let { "\n".repeat(it.count) } ?: ""
 
-            // Собираем итоговый блок: сначала пустые строки, затем комментарий, потом само свойство.
-            "$spacerStr$commentStr$indent$block"
+            spacerStr + commentStr + indent + block
         }
     }
     return result

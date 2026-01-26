@@ -5,6 +5,9 @@ import com.charleskorn.kaml.YamlConfiguration
 import com.charleskorn.kaml.YamlNamingStrategy
 import kotlinx.serialization.KSerializer
 import java.io.File
+import java.nio.file.Files
+import java.nio.file.StandardCopyOption
+import java.util.UUID
 import kotlin.reflect.KClass
 
 /**
@@ -32,5 +35,41 @@ fun <T : Any> writeConfigWithComments(
     val yaml = Yaml(configuration = yamlConfiguration)
     val serialized = yaml.encodeToString(serializer, config)
     val withComments = addComments(serialized, clazz)
-    file.writeText(withComments)
+
+    val content = if (withComments.endsWith("\n")) withComments else "$withComments\n"
+    atomicWriteUtf8(file, content)
+}
+
+private fun atomicWriteUtf8(file: File, content: String) {
+    val parent = file.parentFile
+    if (parent != null && !parent.exists() && !parent.mkdirs()) {
+        throw IllegalStateException("Failed to create directory: ${parent.absolutePath}")
+    }
+
+    val tempFile = File(
+        parent ?: File("."),
+        "${file.name}.tmp-${UUID.randomUUID()}"
+    )
+
+    try {
+        tempFile.writeText(content, Charsets.UTF_8)
+        try {
+            Files.move(
+                tempFile.toPath(),
+                file.toPath(),
+                StandardCopyOption.REPLACE_EXISTING,
+                StandardCopyOption.ATOMIC_MOVE
+            )
+        } catch (_: Exception) {
+            Files.move(
+                tempFile.toPath(),
+                file.toPath(),
+                StandardCopyOption.REPLACE_EXISTING
+            )
+        }
+    } finally {
+        if (tempFile.exists()) {
+            tempFile.delete()
+        }
+    }
 }

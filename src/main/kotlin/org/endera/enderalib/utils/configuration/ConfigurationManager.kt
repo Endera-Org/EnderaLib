@@ -5,6 +5,9 @@ import com.charleskorn.kaml.YamlNamingStrategy
 import kotlinx.serialization.KSerializer
 import org.endera.enderalib.utils.PluginException
 import java.io.File
+import java.time.Instant
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
 import java.util.logging.Logger
 import kotlin.reflect.KClass
 
@@ -47,7 +50,6 @@ class ConfigurationManager<T : Any>(
 
         var fileConfig: T? = null
 
-        // Пытаемся загрузить конфигурацию в строгом режиме
         try {
             fileConfig = loadConfig(
                 configFile,
@@ -66,12 +68,18 @@ class ConfigurationManager<T : Any>(
 
         if (fileConfig == null) {
             try {
-                val backupFile = File(
-                    configFile.parent,
-                    "${configFile.nameWithoutExtension}-backup.${configFile.extension}"
-                )
-                configFile.copyTo(backupFile, overwrite = true)
-                logger.info("Backup of original configuration ''${configFile.name} saved to: ${backupFile.absolutePath}")
+                val timestamp = DateTimeFormatter
+                    .ofPattern("yyyy-MM-dd_HH-mm-ss")
+                    .withZone(ZoneId.systemDefault())
+                    .format(Instant.now())
+                val backupFile = if (configFile.extension.isNotBlank()) {
+                    File(configFile.parentFile, "${configFile.nameWithoutExtension}-backup-$timestamp.${configFile.extension}")
+                } else {
+                    File(configFile.parentFile, "${configFile.nameWithoutExtension}-backup-$timestamp")
+                }
+
+                configFile.copyTo(backupFile, overwrite = false)
+                logger.info("Backup of original configuration '${configFile.name}' saved to: ${backupFile.absolutePath}")
             } catch (e: Exception) {
                 logger.warning("Failed to backup original configuration '${configFile.name}': ${e.message ?: "Unknown error"}.")
             }
@@ -80,14 +88,13 @@ class ConfigurationManager<T : Any>(
                 logger.info("Attempting dynamic merge of configuration '${configFile.name}'.")
                 val fileContent = configFile.readText(Charsets.UTF_8)
                 fileConfig = mergeYamlConfigs(fileContent, defaultConfig, serializer).also {
-                    logger.info("Dynamic of '${configFile.name}' merge is successful!")
+                    logger.info("Dynamic merge of '${configFile.name}' is successful!")
                 }
             } catch (e: Exception) {
-                logger.severe("Dynamic merge of '${configFile.name}'failed: ${e.message ?: "Unknown error"}.")
+                logger.severe("Dynamic merge of '${configFile.name}' failed: ${e.message ?: "Unknown error"}.")
             }
         }
 
-        // Если восстановить конфигурацию не удалось, переименовываем файл и создаём новый
         if (fileConfig == null) {
             logger.warning("Invalid configuration detected. Renaming invalid configuration file and creating a new one.")
             try {
@@ -100,7 +107,6 @@ class ConfigurationManager<T : Any>(
                 throw PluginException("Failed to regenerate configuration", e)
             }
         }
-        // Записываем объединённый конфиг обратно в файл, добавляя комментарии
         writeConfigWithComments(configFile, fileConfig, serializer, clazz)
         return fileConfig
     }

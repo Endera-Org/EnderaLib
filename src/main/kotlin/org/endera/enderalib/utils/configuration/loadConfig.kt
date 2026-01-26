@@ -26,8 +26,7 @@ fun <T> loadConfig(
     )
 ): T {
     val yaml = Yaml(configuration = yamlConfiguration)
-    val charset = Charsets.UTF_8
-    val text = file.readText(charset)
+    val text = file.readText(Charsets.UTF_8).stripUtf8Bom()
 
     return yaml.decodeFromString(serializer, text)
 }
