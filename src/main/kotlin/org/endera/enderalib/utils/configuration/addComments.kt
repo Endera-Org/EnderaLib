@@ -23,9 +23,10 @@ fun addCommentsForClass(clazz: KClass<*>, yamlText: String, baseIndent: String =
 
         val escapedKey = Regex.escape(key)
         val regex = Regex("(?m)^($baseIndent)($escapedKey:.*(?:\n(?!$baseIndent\\S).*)*)")
-        result = regex.replace(result) { matchResult ->
-            val indent = matchResult.groupValues[1]
-            var block = matchResult.groupValues[2]
+        val match = regex.find(result)
+        if (match != null) {
+            val indent = match.groupValues[1]
+            var block = match.groupValues[2]
 
             val nestedType = property.returnType.classifier as? KClass<*>
             if (nestedType != null && nestedType.findAnnotation<Serializable>() != null) {
@@ -41,7 +42,7 @@ fun addCommentsForClass(clazz: KClass<*>, yamlText: String, baseIndent: String =
 
             val spacerStr = spacer?.let { "\n".repeat(it.count) } ?: ""
 
-            spacerStr + commentStr + indent + block
+            result = result.replaceRange(match.range, spacerStr + commentStr + indent + block)
         }
     }
     return result
