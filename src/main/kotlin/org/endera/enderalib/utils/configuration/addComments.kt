@@ -22,30 +22,65 @@ fun addCommentsForClass(clazz: KClass<*>, yamlText: String, baseIndent: String =
         val key = property.findAnnotation<SerialName>()?.value ?: property.name.toKebabCase()
 
         val escapedKey = Regex.escape(key)
-        val regex = Regex("(?m)^($baseIndent)($escapedKey:.*(?:\n(?!$baseIndent\\S).*)*)")
-        val match = regex.find(result)
-        if (match != null) {
-            val indent = match.groupValues[1]
-            var block = match.groupValues[2]
+        // Simple regex to find just the key line start - avoids catastrophic backtracking
+        val keyRegex = Regex("(?m)^($baseIndent)($escapedKey:)")
+        val keyMatch = keyRegex.find(result) ?: return@forEach
 
-            val nestedType = property.returnType.classifier as? KClass<*>
-            if (nestedType != null && nestedType.findAnnotation<Serializable>() != null) {
-                block = addCommentsForClass(nestedType, block, "$baseIndent  ")
-            }
+        val blockStart = keyMatch.range.first
+        val indent = keyMatch.groupValues[1]
 
-            val commentStr = if (comment != null) {
-                comment.text
-                    .trimIndent()
-                    .lines()
-                    .joinToString("\n") { "$indent# $it" } + "\n"
-            } else ""
+        // Find block end by scanning lines instead of using regex with nested quantifiers
+        val blockEnd = findBlockEnd(result, keyMatch.range.last + 1, baseIndent)
+        var block = result.substring(keyMatch.range.first + indent.length, blockEnd)
 
-            val spacerStr = spacer?.let { "\n".repeat(it.count) } ?: ""
-
-            result = result.replaceRange(match.range, spacerStr + commentStr + indent + block)
+        val nestedType = property.returnType.classifier as? KClass<*>
+        if (nestedType != null && nestedType.findAnnotation<Serializable>() != null) {
+            block = addCommentsForClass(nestedType, block, "$baseIndent  ")
         }
+
+        val commentStr = if (comment != null) {
+            comment.text
+                .trimIndent()
+                .lines()
+                .joinToString("\n") { "$indent# $it" } + "\n"
+        } else ""
+
+        val spacerStr = spacer?.let { "\n".repeat(it.count) } ?: ""
+
+        result = result.replaceRange(blockStart, blockEnd, spacerStr + commentStr + indent + block)
     }
     return result
+}
+
+/**
+ * Finds the end of a YAML block by scanning for the next line that starts with
+ * the base indentation followed by a non-whitespace character.
+ */
+private fun findBlockEnd(text: String, startIndex: Int, baseIndent: String): Int {
+    var i = startIndex
+    while (i < text.length) {
+        // Find next newline
+        val newlineIndex = text.indexOf('\n', i)
+        if (newlineIndex == -1) {
+            return text.length
+        }
+
+        val lineStart = newlineIndex + 1
+        if (lineStart >= text.length) {
+            return text.length
+        }
+
+        // Check if this line starts with baseIndent followed by non-whitespace
+        if (text.startsWith(baseIndent, lineStart)) {
+            val afterIndent = lineStart + baseIndent.length
+            if (afterIndent < text.length && !text[afterIndent].isWhitespace()) {
+                return newlineIndex
+            }
+        }
+
+        i = lineStart
+    }
+    return text.length
 }
 
 /**
