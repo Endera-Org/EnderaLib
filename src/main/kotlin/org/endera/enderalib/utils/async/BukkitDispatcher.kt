@@ -1,6 +1,7 @@
 package org.endera.enderalib.utils.async
 
 import kotlinx.coroutines.Runnable
+import org.bukkit.Bukkit
 import org.bukkit.plugin.Plugin
 import org.endera.enderalib.isFolia
 import kotlin.coroutines.CoroutineContext
@@ -16,6 +17,12 @@ import kotlin.coroutines.CoroutineContext
  * @param plugin The plugin instance associated with this dispatcher.
  */
 class BukkitDispatcher(private val plugin: Plugin) : AbstractBukkitDispatcher(plugin) {
+    override fun isDispatchNeeded(context: CoroutineContext): Boolean =
+        if (isFolia) {
+            !Bukkit.isGlobalTickThread()
+        } else {
+            !Bukkit.isPrimaryThread()
+        }
 
     /**
      * Dispatches a runnable block of code to be executed on the appropriate scheduler.
