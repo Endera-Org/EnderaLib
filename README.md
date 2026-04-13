@@ -74,6 +74,34 @@ val myConfig = ConfigurationManager(
 ).loadOrCreateConfig()
 ```
 
+#### Switch between IO and Bukkit/Folia threads in suspend code
+
+```kotlin
+plugin.coroutines.launch {
+    val async = plugin.coroutines
+
+    val profile = async.withIo {
+        profileRepository.load(player.uniqueId)
+    }
+
+    async.withEntity(player) {
+        player.sendMessage("<green>Loaded ${profile.name}".stringToComponent())
+    }
+}
+```
+
+Or, if you already know the starting context:
+
+```kotlin
+plugin.coroutines.launchIo {
+    val profile = profileRepository.load(player.uniqueId)
+
+    plugin.coroutines.withEntity(player) {
+        player.sendMessage("<green>Loaded ${profile.name}".stringToComponent())
+    }
+}
+```
+
 ---
 
 ## Building from source
