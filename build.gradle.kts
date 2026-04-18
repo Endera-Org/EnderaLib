@@ -2,18 +2,17 @@ import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 import org.jetbrains.kotlin.gradle.dsl.KotlinVersion
 
 plugins {
-    kotlin("jvm") version "2.3.0"
-    kotlin("plugin.serialization") version "2.3.0"
+    kotlin("jvm") version "2.3.20"
+    kotlin("plugin.serialization") version "2.3.20"
     id("com.gradleup.shadow") version "9.2.2"
     `maven-publish`
 }
 
 group = "org.endera"
-version = "1.4.8"
+version = "1.5.0"
 
 repositories {
     mavenCentral()
-//    maven("https://repo.papermc.io/repository/maven-public/")
     maven {
         name = "papermc"
         url = uri("https://repo.papermc.io/repository/maven-public/")
@@ -22,13 +21,12 @@ repositories {
 
 dependencies {
     // Minecraft APIs
-    val exposedVersion = "1.0.0-rc-4"
-    val ktorVersion = "3.3.3"
+    val exposedVersion = "1.2.0"
+    val ktorVersion = "3.4.2"
 
     compileOnly("net.kyori:adventure-text-minimessage:4.16.0")
 
     compileOnly("dev.folia:folia-api:1.20.4-R0.1-SNAPSHOT")
-//    compileOnly("io.papermc.paper:paper-api:1.20.4-R0.1-SNAPSHOT")
 
     // Exposed
     api("io.ktor:ktor-client-core:$ktorVersion")

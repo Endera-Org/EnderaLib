@@ -32,6 +32,7 @@ class EntitySchedulerRetiredException(entity: Entity) :
 class PluginCoroutineCancelledException(plugin: Plugin) :
     CancellationException("Coroutine scope for plugin ${plugin.name} was cancelled")
 
+@Suppress("unused")
 class PluginCoroutines internal constructor(
     private val plugin: Plugin
 ) : CoroutineScope {
