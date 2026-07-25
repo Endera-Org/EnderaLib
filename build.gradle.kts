@@ -2,8 +2,8 @@ import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 import org.jetbrains.kotlin.gradle.dsl.KotlinVersion
 
 plugins {
-    kotlin("jvm") version "2.3.20"
-    kotlin("plugin.serialization") version "2.3.20"
+    kotlin("jvm") version "2.4.10"
+    kotlin("plugin.serialization") version "2.4.10"
     id("com.gradleup.shadow") version "9.2.2"
     `maven-publish`
 }
@@ -21,8 +21,8 @@ repositories {
 
 dependencies {
     // Minecraft APIs
-    val exposedVersion = "1.2.0"
-    val ktorVersion = "3.4.2"
+    val exposedVersion = "1.3.1"
+    val ktorVersion = "3.5.1"
 
     compileOnly("net.kyori:adventure-text-minimessage:4.16.0")
 
@@ -38,9 +38,9 @@ dependencies {
     api("org.jetbrains.exposed:exposed-dao:$exposedVersion")
     api("org.jetbrains.exposed:exposed-jdbc:$exposedVersion")
 
-    api("com.zaxxer:HikariCP:7.0.2")
+    api("com.zaxxer:HikariCP:7.1.0")
 
-    api("org.jetbrains.kotlinx:kotlinx-serialization-core:1.9.0")
+    api("org.jetbrains.kotlinx:kotlinx-serialization-core:1.11.0")
     api("com.charleskorn.kaml:kaml:0.104.0")
 
 
