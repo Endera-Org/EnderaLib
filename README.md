@@ -35,8 +35,8 @@ dependencies {
 }
 ```
 
-A shaded JAR (`enderalib-x.y.z-shaded.jar`) is also created by the build if you need to relocate the library into your
-own plugin.
+The plugin JAR stays small because its runtime dependencies are declared through Minecraft's built-in library loader.
+Paper, Folia, and current Spigot servers download those dependencies from Maven Central when the plugin is first loaded.
 
 ---
 

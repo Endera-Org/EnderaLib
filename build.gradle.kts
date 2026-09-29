@@ -2,14 +2,42 @@ import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 import org.jetbrains.kotlin.gradle.dsl.KotlinVersion
 
 plugins {
-    kotlin("jvm") version "2.4.10"
-    kotlin("plugin.serialization") version "2.4.10"
-    id("com.gradleup.shadow") version "9.2.2"
+    kotlin("jvm") version "2.4.20"
+    kotlin("plugin.serialization") version "2.4.20"
     `maven-publish`
 }
 
 group = "org.endera"
-version = "1.5.0"
+version = "1.6.0"
+
+val kotlinVersion = "2.4.20"
+val exposedVersion = "1.5.0"
+val ktorVersion = "3.6.0"
+
+val apiLibraries = listOf(
+    "org.jetbrains.kotlin:kotlin-stdlib:$kotlinVersion",
+    "io.ktor:ktor-client-core-jvm:$ktorVersion",
+    "io.ktor:ktor-client-okhttp-jvm:$ktorVersion",
+    "io.ktor:ktor-client-content-negotiation-jvm:$ktorVersion",
+    "io.ktor:ktor-serialization-kotlinx-json-jvm:$ktorVersion",
+    "org.jetbrains.exposed:exposed-core:$exposedVersion",
+    "org.jetbrains.exposed:exposed-dao:$exposedVersion",
+    "org.jetbrains.exposed:exposed-jdbc:$exposedVersion",
+    "com.zaxxer:HikariCP:7.1.0",
+    "org.jetbrains.kotlinx:kotlinx-coroutines-core-jvm:1.11.0",
+    "org.jetbrains.kotlinx:kotlinx-serialization-core-jvm:1.11.0",
+    "org.jetbrains.kotlinx:kotlinx-serialization-json-jvm:1.11.0",
+    "com.charleskorn.kaml:kaml-jvm:0.104.0",
+)
+
+val runtimeLibraries = listOf(
+    "com.mysql:mysql-connector-j:26.7.0",
+    "org.postgresql:postgresql:42.7.13",
+    "org.mariadb.jdbc:mariadb-java-client:3.5.10",
+    "com.h2database:h2:2.5.252",
+)
+
+val minecraftLibraries = apiLibraries + runtimeLibraries
 
 repositories {
     mavenCentral()
@@ -20,35 +48,11 @@ repositories {
 }
 
 dependencies {
-    // Minecraft APIs
-    val exposedVersion = "1.3.1"
-    val ktorVersion = "3.5.1"
-
     compileOnly("net.kyori:adventure-text-minimessage:4.16.0")
-
     compileOnly("dev.folia:folia-api:1.20.4-R0.1-SNAPSHOT")
 
-    // Exposed
-    api("io.ktor:ktor-client-core:$ktorVersion")
-    api("io.ktor:ktor-client-okhttp:$ktorVersion")
-    api("io.ktor:ktor-client-content-negotiation:$ktorVersion")
-    api("io.ktor:ktor-serialization-kotlinx-json:$ktorVersion")
-
-    api("org.jetbrains.exposed:exposed-core:$exposedVersion")
-    api("org.jetbrains.exposed:exposed-dao:$exposedVersion")
-    api("org.jetbrains.exposed:exposed-jdbc:$exposedVersion")
-
-    api("com.zaxxer:HikariCP:7.1.0")
-
-    api("org.jetbrains.kotlinx:kotlinx-serialization-core:1.11.0")
-    api("com.charleskorn.kaml:kaml:0.104.0")
-
-
-    // Database drivers
-    runtimeOnly("com.mysql:mysql-connector-j:9.5.0")
-    runtimeOnly("org.postgresql:postgresql:42.7.8")
-    runtimeOnly("org.mariadb.jdbc:mariadb-java-client:3.5.7")
-    runtimeOnly("com.h2database:h2:2.4.240")
+    apiLibraries.forEach { api(it) }
+    runtimeLibraries.forEach { runtimeOnly(it) }
 }
 
 publishing {
@@ -66,13 +70,14 @@ publishing {
 
 tasks.processResources {
     inputs.property("version", rootProject.version)
-        filesMatching("**plugin.yml") {
-            expand("version" to rootProject.version)
-    }
-}
+    inputs.property("minecraftLibraries", minecraftLibraries)
 
-tasks.shadowJar {
-    archiveClassifier.set("shaded")
+    filesMatching("**/plugin.yml") {
+        expand(
+            "version" to rootProject.version,
+            "libraries" to minecraftLibraries.joinToString("\n") { "  - $it" },
+        )
+    }
 }
 
 tasks.test {
