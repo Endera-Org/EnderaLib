@@ -8,7 +8,7 @@ plugins {
 }
 
 group = "org.endera"
-version = "1.6.0"
+version = "1.6.1"
 
 val kotlinVersion = "2.4.20"
 val exposedVersion = "1.5.0"
