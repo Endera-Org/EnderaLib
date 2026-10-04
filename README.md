@@ -1,6 +1,6 @@
 # EnderaLib
 
-![JitPack](https://jitpack.io/v/org.endera.enderalib/enderalib.svg)
+[![JitPack](https://jitpack.io/v/Endera-Org/EnderaLib.svg)](https://jitpack.io/#Endera-Org/EnderaLib)
 ![License](https://img.shields.io/badge/license-MIT-green.svg)
 
 A Kotlin **utility library & Bukkit/Folia plugin** that bundles common functionality my projects depend on:
@@ -10,7 +10,7 @@ A Kotlin **utility library & Bukkit/Folia plugin** that bundles common functiona
 * 🌐 Ktor HTTP client pre-configured for plugins
 * 🗄️ Exposed ORM & HikariCP helpers for database access
 * 📊 bStats integration
-* 🧩 Assorted utilities (permissions, pagination, async tasks, etc.)
+* 🧩 Assorted utilities (permissions, menu items, async tasks, etc.)
 
 The goal is to remove boiler-plate from Spigot/Paper/Folia plugin development and keep all shared code in a single,
 versioned place.
@@ -31,8 +31,14 @@ repositories {
 
 dependencies {
     // Replace x.y.z with the version shown on the badge above
-    implementation("org.endera.enderalib:enderalib:x.y.z")
+    compileOnly("com.github.Endera-Org:EnderaLib:x.y.z")
 }
+```
+
+EnderaLib runs as a plugin on the server, so depend on it with `compileOnly` and add it to your `plugin.yml`:
+
+```yaml
+depend: [EnderaLib]
 ```
 
 The plugin JAR stays small because its runtime dependencies are declared through Minecraft's built-in library loader.
@@ -42,7 +48,7 @@ Paper, Folia, and current Spigot servers download those dependencies from Maven 
 
 ## Using as a standalone plugin
 
-Just drop the compiled `enderalib-x.y.z.jar` in your server’s `plugins` folder. The plugin adds a single command:
+Just drop the compiled `EnderaLib-x.y.z.jar` in your server’s `plugins` folder. The plugin adds a single command:
 
 | Command | Description |
 |---------|-------------|
@@ -73,6 +79,16 @@ val myConfig = ConfigurationManager(
     clazz        = ConfigScheme::class
 ).loadOrCreateConfig()
 ```
+
+#### Report plugin stats to bStats
+
+```kotlin
+override fun onEnable() {
+    MetricsLite(this, pluginId)
+}
+```
+
+Create it while the plugin is enabled, for example in `onEnable`. Reporting stops when the plugin is disabled.
 
 #### Switch between IO and Bukkit/Folia threads in suspend code
 
