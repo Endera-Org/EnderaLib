@@ -5,7 +5,6 @@ import org.bukkit.Material
 import org.bukkit.NamespacedKey
 import org.bukkit.inventory.ItemFlag
 import org.bukkit.inventory.ItemStack
-import org.bukkit.inventory.meta.ItemMeta
 import org.bukkit.inventory.meta.SkullMeta
 import org.bukkit.persistence.PersistentDataType
 import org.endera.enderalib.adventure.stringToComponent
@@ -18,7 +17,7 @@ fun createMenuItem(
     keys: List<ItemNameKey> = listOf(),
 ): ItemStack {
     val item = ItemStack(material)
-    val meta = item.itemMeta as ItemMeta
+    val meta = item.itemMeta
     if (lore != null) {
         meta.lore(lore.map { ("<!italic><white>$it").stringToComponent() })
     }
@@ -57,10 +56,7 @@ fun createMenuHeadItem(
         modelData = modelData,
         keys = keys
     )
-    val meta = item.itemMeta as SkullMeta
-
-    meta.owningPlayer = Bukkit.getOfflinePlayer(owner)
-
-    item.itemMeta = meta
+    // A name-only profile lets the server resolve the skin in the background instead of blocking on a Mojang lookup
+    item.editMeta(SkullMeta::class.java) { it.playerProfile = Bukkit.createProfile(owner) }
     return item
 }

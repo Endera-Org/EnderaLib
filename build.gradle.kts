@@ -16,6 +16,7 @@ val ktorVersion = "3.6.0"
 
 val apiLibraries = listOf(
     "org.jetbrains.kotlin:kotlin-stdlib:$kotlinVersion",
+    "org.jetbrains.kotlin:kotlin-reflect:$kotlinVersion",
     "io.ktor:ktor-client-core-jvm:$ktorVersion",
     "io.ktor:ktor-client-okhttp-jvm:$ktorVersion",
     "io.ktor:ktor-client-content-negotiation-jvm:$ktorVersion",

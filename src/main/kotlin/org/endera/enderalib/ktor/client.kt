@@ -11,7 +11,6 @@ val client = HttpClient(OkHttp) {
     install(ContentNegotiation) {
         json(
             json = Json {
-                prettyPrint = true
                 ignoreUnknownKeys = true
                 isLenient = true
             }
