@@ -2,7 +2,6 @@ package org.endera.enderalib.utils.configuration
 
 import com.charleskorn.kaml.Yaml
 import com.charleskorn.kaml.YamlConfiguration
-import com.charleskorn.kaml.YamlNamingStrategy
 import kotlinx.serialization.KSerializer
 import java.io.File
 import java.nio.file.Files
@@ -26,11 +25,7 @@ fun <T : Any> writeConfigWithComments(
     config: T,
     serializer: KSerializer<T>,
     clazz: KClass<T>,
-    yamlConfiguration: YamlConfiguration = YamlConfiguration(
-        strictMode = false,
-        breakScalarsAt = 400,
-        yamlNamingStrategy = YamlNamingStrategy.KebabCase
-    )
+    yamlConfiguration: YamlConfiguration = configYaml(strict = false)
 ) {
     val yaml = Yaml(configuration = yamlConfiguration)
     val serialized = yaml.encodeToString(serializer, config)

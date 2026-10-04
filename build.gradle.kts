@@ -53,6 +53,8 @@ dependencies {
 
     apiLibraries.forEach { api(it) }
     runtimeLibraries.forEach { runtimeOnly(it) }
+
+    testImplementation(kotlin("test"))
 }
 
 publishing {
